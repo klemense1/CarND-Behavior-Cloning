@@ -290,7 +290,7 @@ def calc_samples_per_epoch(epoch_size, batch_size):
     """
     Calcuates number of samples per epoch
     """
-    spe = epoch_size + epoch_size % batch_size
+    spe = epoch_size - epoch_size % batch_size + batch_size
 
     return spe
 
@@ -317,7 +317,6 @@ def train_model_generator(mdl, training_list, validation_list, epochs, batch_siz
     mdl.compile(
                 loss='mean_squared_error',
                 optimizer='adam',
-                metrics=['accuracy']
                )
 
     history = mdl.fit_generator(my_generator(training_list, batch_size),
@@ -330,11 +329,11 @@ def train_model_generator(mdl, training_list, validation_list, epochs, batch_siz
                                         val_samples=spe_val,
                                         )
 
-    accuracy_evaluation = score_eval[1]
+    loss = score_eval
 
-    print("[Evaluation]%s: %.2f%%" % (mdl.metrics_names[1], accuracy_evaluation*100))
+    print("[Evaluation]%s: %.2f%%" % (mdl.metrics_names, loss))
 
-    return mdl, accuracy_evaluation
+    return mdl, loss
 
 
 def train_model(mdl, X_train, Y_train, X_val, Y_val, epochs, batch_size):
@@ -353,8 +352,7 @@ def train_model(mdl, X_train, Y_train, X_val, Y_val, epochs, batch_size):
     score_eval ... Score of evaluation
     """
     mdl.compile(loss='mean_squared_error',
-                optimizer='adam',
-                metrics=['accuracy'])
+                optimizer='adam')
 
     mdl.fit(X_train,
             Y_train,
@@ -364,11 +362,11 @@ def train_model(mdl, X_train, Y_train, X_val, Y_val, epochs, batch_size):
 
     # evaluate the model
     score_eval = mdl.evaluate(X_val, Y_val, verbose=0)
-    accuracy_evaluation = score_eval[1]
+    loss = score_eval
 
-    print("[Evaluation]%s: %.2f%%" % (mdl.metrics_names[1], accuracy_evaluation*100))
+    print("[Evaluation]%s: %.2f%%" % (mdl.metrics_names, loss))
 
-    return mdl, accuracy_evaluation
+    return mdl, loss
 
 
 def test_generate_slices():
@@ -432,7 +430,7 @@ if __name__ == "__main__":
     print('Number of frames for training', len(list_train))
     print('Number of frames for validation', len(list_val))
 
-    model, acc = train_model_generator(model,
+    model, losses = train_model_generator(model,
                                        list_train,
                                        list_val,
                                        epochs=1,
