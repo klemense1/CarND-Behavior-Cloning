@@ -24,19 +24,29 @@ import matplotlib.image as mpimg
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 import json
+from keras.models import model_from_json
 
 NUM_CLASSES = 1
 
 NUM_CHANNELS = 3
 
-IMAGE_LENGTH_X = 160
-IMAGE_LENGTH_Y = 80
+RESIZE = True
+
+LEARNING_RATE = 1e-3
+
+if RESIZE:
+    IMAGE_LENGTH_X = 160
+    IMAGE_LENGTH_Y = 80
+else:
+    IMAGE_LENGTH_X = 320
+    IMAGE_LENGTH_Y = 160
 
 IMAGE_SIZE = (IMAGE_LENGTH_X, IMAGE_LENGTH_Y)
 IMAGE_SHAPE = (IMAGE_LENGTH_Y, IMAGE_LENGTH_X, NUM_CHANNELS)
 
 PROJECT_DIR = '/Users/Klemens/Udacity_Nano_Car/P3_BehaviorCloning/'
-IMAGE_DIR = os.path.join(PROJECT_DIR, 'data')
+# IMAGE_DIR = os.path.join(PROJECT_DIR), 'data')
+IMAGE_DIR = PROJECT_DIR
 UNITTEST_LOG_PATH = os.path.join(PROJECT_DIR, 'driving_log_unittest.csv')
 DRIVING_LOG_PATH = os.path.join(IMAGE_DIR, 'driving_log.csv')
 
@@ -103,7 +113,8 @@ def plot_image_and_angle(axis, img_path, angl):
 
     axis.set_title(title)
 
-
+def generate_additional_data():
+    
 def visualize_training_data(log_path):
     """
     visualizes training data using three images and corresponding angles
@@ -316,7 +327,7 @@ def train_model_generator(mdl, training_list, validation_list, epochs, batch_siz
 
     mdl.compile(
                 loss='mean_squared_error',
-                optimizer='adam',
+                optimizer=Adam(lr=LEARNING_RATE),
                )
 
     history = mdl.fit_generator(my_generator(training_list, batch_size),
@@ -418,8 +429,16 @@ def test_model_and_training_without_generator():
 if __name__ == "__main__":
 
     # visualize_training_data(DRIVING_LOG_PATH)
+    if True:
+        with open('model.json', 'r') as json_file:
+            loaded_model_json = json_file.read()
+            model = model_from_json(loaded_model_json)
+        # load weights into new model
+        model.load_weights("model.h5")
+        print("Loaded model from disk")
 
-    model = build_model()
+    else:
+        model = build_model()
 
     log_list = read_driving_log(DRIVING_LOG_PATH)
     shuffled_list = shuffle(log_list)
@@ -433,7 +452,7 @@ if __name__ == "__main__":
     model, losses = train_model_generator(model,
                                        list_train,
                                        list_val,
-                                       epochs=1,
+                                       epochs=20,
                                        batch_size=100)
 
     model_json = model.to_json()

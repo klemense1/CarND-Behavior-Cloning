@@ -15,6 +15,8 @@ from io import BytesIO
 from keras.models import model_from_json
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array
 
+import matplotlib.pyplot as plt
+import cv2
 # Fix error with Keras and TensorFlow
 import tensorflow as tf
 tf.python.control_flow_ops = tf
@@ -36,7 +38,10 @@ def telemetry(sid, data):
     # The current image from the center camera of the car
     imgString = data["image"]
     image = Image.open(BytesIO(base64.b64decode(imgString)))
+
     image_array = np.asarray(image)
+    resize_shape = (160, 80)
+    image_array = cv2.resize(image_array, resize_shape)
     transformed_image_array = image_array[None, :, :, :]
     # This model currently assumes that the features of the model are just the images. Feel free to change this.
     steering_angle = float(model.predict(transformed_image_array, batch_size=1))
@@ -64,6 +69,7 @@ if __name__ == '__main__':
     parser.add_argument('model', type=str,
     help='Path to model definition json. Model weights should be on the same path.')
     args = parser.parse_args()
+    print('args:', args)
     with open(args.model, 'r') as jfile:
         # NOTE: if you saved the file by calling json.dump(model.to_json(), ...)
         # then you will have to call:
@@ -72,12 +78,14 @@ if __name__ == '__main__':
         #
         # instead.
         model = model_from_json(jfile.read())
+        print(model.summary())
 
 
     model.compile("adam", "mse")
+    print('model compiled')
     weights_file = args.model.replace('json', 'h5')
     model.load_weights(weights_file)
-
+    print(weights_file)
     # wrap Flask application with engineio's middleware
     app = socketio.Middleware(sio, app)
 
