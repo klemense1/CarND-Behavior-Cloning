@@ -8,7 +8,7 @@ import csv
 import pytest
 import os
 import math
-from skimage.color import rgb2gray, gray2rgb
+# from skimage.color import rgb2gray, gray2rgb
 import cv2
 
 from keras.models import Sequential
@@ -25,12 +25,17 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 import json
 from keras.models import model_from_json
+import random
 
 NUM_CLASSES = 1
 
 NUM_CHANNELS = 3
 
+TRAIN_FROM_SCRATCH = True
+
 RESIZE = True
+CAMERA_AND_AUGMENTATION_MODES = ['CenterCam', 'LeftCam', 'RightCam', 'FlipCenter', 'FlipLeft', 'FlipRight']#'BrightnessCenter', 'BrightnessFlipCenter',
+NUM_IMAGE_MODES = len(CAMERA_AND_AUGMENTATION_MODES)
 
 LEARNING_RATE = 1e-3
 
@@ -45,7 +50,7 @@ IMAGE_SIZE = (IMAGE_LENGTH_X, IMAGE_LENGTH_Y)
 IMAGE_SHAPE = (IMAGE_LENGTH_Y, IMAGE_LENGTH_X, NUM_CHANNELS)
 
 PROJECT_DIR = '/Users/Klemens/Udacity_Nano_Car/P3_BehaviorCloning/'
-# IMAGE_DIR = os.path.join(PROJECT_DIR), 'data')
+# IMAGE_DIR = os.path.join(PROJECT_DIR, 'data')
 IMAGE_DIR = PROJECT_DIR
 UNITTEST_LOG_PATH = os.path.join(PROJECT_DIR, 'driving_log_unittest.csv')
 DRIVING_LOG_PATH = os.path.join(IMAGE_DIR, 'driving_log.csv')
@@ -64,7 +69,10 @@ def load_image(image_path, resize_shape=None):
     # numpy array will come as float. as imshow results in strange behaviour,
     # with float, convert it back to unsigned int
     # X_train_gen = np.uint8()
-    img = cv2.imread(image_path)
+    if os.path.isfile(image_path):
+        img = cv2.imread(image_path)
+    else:
+        print('FILE NOT FOUND', image_path)
 
     if resize_shape is None:
         img_resized = img
@@ -87,10 +95,12 @@ def read_driving_log(log_path):
     driving_log = []
     fields = ['center', 'left', 'right', 'steering', 'throttle', 'brake', 'speed']
     with open(log_path, 'r') as csvfile:
-        reader = csv.DictReader(csvfile, fieldnames=fields)
+        reader = csv.DictReader(csvfile, fieldnames=fields, delimiter=',')
         for row in reader:
             driving_frame = {
                              'center': row['center'],
+                             'left': row['left'][1:], # remove first whitespace
+                             'right': row['right'][1:],  # remove first whitespace
                              'steering': row['steering'],
                              'speed': row['speed']
                             }
@@ -99,11 +109,16 @@ def read_driving_log(log_path):
     return driving_log
 
 
-def plot_image_and_angle(axis, img_path, angl):
+def plot_image_and_angle(axis, img_path, angl, flip=False, change_bright=False):
     """
     plots image with corresponding steering angle in given matplotlib axis
     """
     img = load_image(img_path)
+    if flip:
+        img, angl = flip_image_angle_pair(img, angl)
+
+    if change_bright:
+        img = img#change_brightness(img)
 
     axis.imshow(img)
     plt.setp(axis.get_xticklabels(), visible=False)
@@ -113,8 +128,7 @@ def plot_image_and_angle(axis, img_path, angl):
 
     axis.set_title(title)
 
-def generate_additional_data():
-    
+
 def visualize_training_data(log_path):
     """
     visualizes training data using three images and corresponding angles
@@ -125,19 +139,45 @@ def visualize_training_data(log_path):
 
     speed = np.array([float(log['speed']) for log in log_list])
 
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 4))
+    fig, axes = plt.subplots(3, 3, figsize=(16, 8))
 
-    image_path = log_list[0]['center']
-    angle = log_list[0]['steering']
-    plot_image_and_angle(ax1, image_path, angle)
+    image_path = get_absolute_imgpath(log_list[0]['left'])
+    angle = float(log_list[0]['steering']) + 0.25
+    plot_image_and_angle(axes[0,0], image_path, angle)
 
-    image_path = log_list[1]['center']
-    angle = log_list[1]['steering']
-    plot_image_and_angle(ax2, image_path, angle)
+    image_path = get_absolute_imgpath(log_list[0]['center'])
+    angle = float(log_list[0]['steering'])
+    plot_image_and_angle(axes[0,1], image_path, angle)
 
-    image_path = log_list[2]['center']
-    angle = log_list[2]['steering']
-    plot_image_and_angle(ax3, image_path, angle)
+    image_path = get_absolute_imgpath(log_list[0]['right'])
+    angle = float(log_list[0]['steering']) - 0.25
+    plot_image_and_angle(axes[0,2], image_path, angle)
+
+
+    image_path = get_absolute_imgpath(log_list[0]['left'])
+    angle = float(log_list[0]['steering']) + 0.25
+    plot_image_and_angle(axes[1,0], image_path, angle, change_bright=True)
+
+    image_path = get_absolute_imgpath(log_list[0]['center'])
+    angle = float(log_list[0]['steering'])
+    plot_image_and_angle(axes[1,1], image_path, angle, change_bright=True)
+
+    image_path = get_absolute_imgpath(log_list[0]['right'])
+    angle = float(log_list[0]['steering']) - 0.25
+    plot_image_and_angle(axes[1,2], image_path, angle, change_bright=True)
+
+
+    image_path = get_absolute_imgpath(log_list[0]['left'])
+    angle = float(log_list[0]['steering']) + 0.25
+    plot_image_and_angle(axes[2,0], image_path, angle, flip=True)
+
+    image_path = get_absolute_imgpath(log_list[0]['center'])
+    angle = float(log_list[0]['steering'])
+    plot_image_and_angle(axes[2,1], image_path, angle, flip=True)
+
+    image_path = get_absolute_imgpath(log_list[0]['right'])
+    angle = float(log_list[0]['steering']) - 0.25
+    plot_image_and_angle(axes[2,2], image_path, angle, flip=True)
 
     fig.tight_layout()
     plt.show()
@@ -210,6 +250,36 @@ def generate_equal_slices(list_to_slice, batch_size):
 
     return list_slices
 
+def get_absolute_imgpath(image_path):
+
+    if not os.path.isabs(image_path):
+        # print(image_path, 'is not an absolute path...')
+        absolute_image_path = os.path.join(IMAGE_DIR, image_path)
+    else:
+        # print(image_path, 'is an absolute path...')
+        absolute_image_path = image_path
+
+    return absolute_image_path
+
+
+def flip_image_angle_pair(img_in, angle_in):
+
+    image = cv2.flip(img_in, 1)
+    angle = - angle_in
+
+    return image, angle
+
+# def change_brightness(image):
+#     # Randomly select a percent change
+#     change_pct = random.uniform(0.4, 1.2)
+#
+#     # Change to HSV to change the brightness V
+#     hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+#     hsv[:,:,2] = hsv[:,:,2] * change_pct
+#
+#     #Convert back to RGB
+#     img_brightness = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+#     return img_brightness
 
 def my_generator(log_file_list, batch_size):
     """
@@ -228,28 +298,83 @@ def my_generator(log_file_list, batch_size):
         shuffled_list = shuffle(log_file_list)
 
         for list_slice in generate_equal_slices(shuffled_list, batch_size):
-            assert len(list_slice) == batch_size
 
-            img_list = []
+            for mode in CAMERA_AND_AUGMENTATION_MODES:
 
-            for row in list_slice:
-                image_path = row['center']
+                img_list = []
+                steering_angle_list = []
 
-                if not os.path.isabs(image_path):
-                    image_path = os.path.join(IMAGE_DIR, image_path)
+                for row in list_slice:
+                    if mode == 'CenterCam':
+                        img_path = get_absolute_imgpath(row['center'])
+                        image = load_image(img_path, IMAGE_SIZE)
 
-                image = load_image(image_path, IMAGE_SIZE)
+                        angle = float(row['steering'])
 
-                img_list.append(image)
+                    elif mode == 'FlipCenter':
+                        img_path = get_absolute_imgpath(row['center'])
+                        image = load_image(img_path, IMAGE_SIZE)
 
-            features_slice = np.array(img_list).astype('float32')
+                        angle = float(row['steering'])
 
-            steering_angle = np.array([float(log['steering']) for log in list_slice])
+                        image, angle = flip_image_angle_pair(image, angle)
 
-            labels_slice = steering_angle
-            assert features_slice.shape[0] == labels_slice.shape[0]
+                    elif mode == 'BrightnessCenter':
+                        img_path = get_absolute_imgpath(row['center'])
+                        image = load_image(img_path, IMAGE_SIZE)
 
-            yield ({'lambda_input_1': features_slice}, {'output': labels_slice})
+                        image = change_brightness(image)
+
+                        angle = float(row['steering'])
+
+                    elif mode == 'BrightnessFlipCenter':
+                        img_path = get_absolute_imgpath(row['center'])
+                        image = load_image(img_path, IMAGE_SIZE)
+
+                        image = change_brightness(image)
+
+                        angle = float(row['steering'])
+
+                        image, angle = flip_image_angle_pair(image, angle)
+
+                    elif mode == 'LeftCam':
+                        img_path = get_absolute_imgpath(row['left'])
+                        image = load_image(img_path, IMAGE_SIZE)
+
+                        angle = float(row['steering']) + 0.06
+
+                    elif mode == 'FlipLeft':
+                        img_path = get_absolute_imgpath(row['left'])
+                        image = load_image(img_path, IMAGE_SIZE)
+
+                        angle = float(row['steering']) + 0.06
+
+                        image, angle = flip_image_angle_pair(image, angle)
+
+                    elif mode == 'RightCam':
+                        img_path = get_absolute_imgpath(row['right'])
+                        image = load_image(img_path, IMAGE_SIZE)
+
+                        angle = float(row['steering']) - 0.06
+
+                    elif mode == 'FlipRight':
+                        img_path = get_absolute_imgpath(row['right'])
+                        image = load_image(img_path, IMAGE_SIZE)
+
+                        angle = float(row['steering']) - 0.06
+
+                        image, angle = flip_image_angle_pair(image, angle)
+
+                    img_list.append(image)
+                    steering_angle_list.append(angle)
+
+                features_slice = np.array(img_list).astype('float32')
+
+                labels_slice = np.array(steering_angle_list)
+                # print('labels, mean:', labels_slice.mean(), 'max:', labels_slice.max(), 'min:', labels_slice.min())
+                assert features_slice.shape[0] == labels_slice.shape[0]
+
+                yield ({'lambda_input_1': features_slice}, {'output': labels_slice})
 
 
 def build_model():
@@ -262,7 +387,60 @@ def build_model():
     mdl = Sequential()
 
     # normalization
-    mdl.add(Lambda(lambda x: x/255. - 0.5, input_shape=IMAGE_SHAPE, name="input"))
+    mdl.add(Lambda(lambda x: x/128. - 1, input_shape=IMAGE_SHAPE, name="input"))
+
+    # trim image
+    mdl.add(Lambda(lambda x: x[:, :-25, :, :]))
+
+    # convolutions
+    mdl.add(Convolution2D(24, 5, 5, subsample=(2, 2), border_mode='same',))
+    mdl.add(MaxPooling2D(pool_size=(2, 2)))
+    mdl.add((Dropout(0.5)))
+    mdl.add(Activation('relu'))
+
+    mdl.add(Convolution2D(36, 5, 5, subsample=(2, 2), border_mode='same',))
+    mdl.add(MaxPooling2D(pool_size=(2, 2)))
+    mdl.add((Dropout(0.5)))
+    mdl.add(Activation('relu'))
+
+    mdl.add(Convolution2D(48, 5, 5, subsample=(2, 2), border_mode='same',))
+    mdl.add(MaxPooling2D(pool_size=(2, 2)))
+    mdl.add((Dropout(0.5)))
+    mdl.add(Activation('relu'))
+
+    mdl.add(Convolution2D(64, 3, 3, subsample=(1, 1), border_mode='same',))
+    # mdl.add(MaxPooling2D(pool_size=(2, 2)))
+    mdl.add((Dropout(0.5)))
+    mdl.add(Activation('relu'))
+
+    mdl.add(Convolution2D(64, 3, 3, subsample=(1, 1), border_mode='same',))
+    # mdl.add(MaxPooling2D(pool_size=(2, 2)))
+    mdl.add((Dropout(0.5)))
+    mdl.add(Activation('relu'))
+
+    mdl.add(Flatten())
+
+    mdl.add(Dense(128, activation='relu'))
+    mdl.add(Dense(64, activation='relu'))
+    # mdl.add(Dense(16, activation='relu'))
+    mdl.add(Dense(NUM_CLASSES, name="output"))
+
+    mdl.summary()
+
+    return mdl
+
+
+def build_model_a():
+    """
+    Creates model using sequential call from keras
+
+    Returns
+    mdl ... keras model
+    """
+    mdl = Sequential()
+
+    # normalization
+    mdl.add(Lambda(lambda x: x/128. - 1., input_shape=IMAGE_SHAPE, name="input"))
 
     # convolutions
     mdl.add(Conv2D(24, 5, 5, subsample=(2, 2), border_mode='same',))
@@ -301,7 +479,7 @@ def calc_samples_per_epoch(epoch_size, batch_size):
     """
     Calcuates number of samples per epoch
     """
-    spe = epoch_size - epoch_size % batch_size + batch_size
+    spe = NUM_IMAGE_MODES * (epoch_size - epoch_size % batch_size + batch_size)
 
     return spe
 
@@ -428,8 +606,11 @@ def test_model_and_training_without_generator():
 
 if __name__ == "__main__":
 
-    # visualize_training_data(DRIVING_LOG_PATH)
-    if True:
+    visualize_training_data(DRIVING_LOG_PATH)
+    if TRAIN_FROM_SCRATCH:
+        model = build_model()
+
+    else:
         with open('model.json', 'r') as json_file:
             loaded_model_json = json_file.read()
             model = model_from_json(loaded_model_json)
@@ -437,8 +618,6 @@ if __name__ == "__main__":
         model.load_weights("model.h5")
         print("Loaded model from disk")
 
-    else:
-        model = build_model()
 
     log_list = read_driving_log(DRIVING_LOG_PATH)
     shuffled_list = shuffle(log_list)
@@ -452,7 +631,7 @@ if __name__ == "__main__":
     model, losses = train_model_generator(model,
                                        list_train,
                                        list_val,
-                                       epochs=20,
+                                       epochs=5,
                                        batch_size=100)
 
     model_json = model.to_json()
