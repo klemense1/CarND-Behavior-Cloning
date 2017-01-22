@@ -34,10 +34,12 @@ NUM_CHANNELS = 3
 TRAIN_FROM_SCRATCH = True
 
 RESIZE = True
-CAMERA_AND_AUGMENTATION_MODES = ['CenterCam', 'LeftCam', 'RightCam', 'FlipCenter', 'FlipLeft', 'FlipRight']#'BrightnessCenter', 'BrightnessFlipCenter',
-NUM_IMAGE_MODES = len(CAMERA_AND_AUGMENTATION_MODES)
+NUM_IMAGE_MODES = 2 # for flipping
 
-LEARNING_RATE = 1e-3
+BATCH_SIZE = 90
+NUM_EPOCHS = 5
+
+LEARNING_RATE = 1e-4
 
 if RESIZE:
     IMAGE_LENGTH_X = 160
@@ -49,7 +51,7 @@ else:
 IMAGE_SIZE = (IMAGE_LENGTH_X, IMAGE_LENGTH_Y)
 IMAGE_SHAPE = (IMAGE_LENGTH_Y, IMAGE_LENGTH_X, NUM_CHANNELS)
 
-PROJECT_DIR = '/Users/Klemens/Udacity_Nano_Car/P3_BehaviorCloning/'
+PROJECT_DIR = '/Users/Klemens/Udacity_Nano_Car/P3_BehaviorCloning/data/'
 # IMAGE_DIR = os.path.join(PROJECT_DIR, 'data')
 IMAGE_DIR = PROJECT_DIR
 UNITTEST_LOG_PATH = os.path.join(PROJECT_DIR, 'driving_log_unittest.csv')
@@ -70,7 +72,7 @@ def load_image(image_path, resize_shape=None):
     # with float, convert it back to unsigned int
     # X_train_gen = np.uint8()
     if os.path.isfile(image_path):
-        img = cv2.imread(image_path)
+        img = mpimg.imread(image_path)
     else:
         print('FILE NOT FOUND', image_path)
 
@@ -79,7 +81,7 @@ def load_image(image_path, resize_shape=None):
     else:
         img_resized = cv2.resize(img, resize_shape)
 
-    return img_resized
+    return img_resized#.astype('float32')
 
 
 def read_driving_log(log_path):
@@ -97,19 +99,29 @@ def read_driving_log(log_path):
     with open(log_path, 'r') as csvfile:
         reader = csv.DictReader(csvfile, fieldnames=fields, delimiter=',')
         for row in reader:
-            driving_frame = {
-                             'center': row['center'],
-                             'left': row['left'][1:], # remove first whitespace
-                             'right': row['right'][1:],  # remove first whitespace
-                             'steering': row['steering'],
-                             'speed': row['speed']
-                            }
-            driving_log.append(driving_frame)
+            center_frame = {'center': row['center'],
+                             'steering': float(row['steering']),
+                             'speed': float(row['speed'])}
+            if abs(float(row['steering']))>0.2:
+                for i in range(30):
+                    driving_log.append(center_frame)
+            else:
+                driving_log.append(center_frame)
+
+            left_frame = {'left': row['left'][1:], # remove first whitespace
+                             'steering': float(row['steering']),
+                             'speed': float(row['speed'])}
+            driving_log.append(left_frame)
+
+            right_frame = {'right': row['right'][1:],  # remove first whitespace
+                             'steering': float(row['steering']),
+                             'speed': float(row['speed'])}
+            driving_log.append(right_frame)
 
     return driving_log
 
 
-def plot_image_and_angle(axis, img_path, angl, flip=False, change_bright=False):
+def plot_image_and_angle(axis, img_path, angl, flip=False, change_bright=False, shear=False):
     """
     plots image with corresponding steering angle in given matplotlib axis
     """
@@ -118,7 +130,9 @@ def plot_image_and_angle(axis, img_path, angl, flip=False, change_bright=False):
         img, angl = flip_image_angle_pair(img, angl)
 
     if change_bright:
-        img = img#change_brightness(img)
+        img = change_brightness(img)
+    if shear:
+        img, angl = random_shear(img,angl,100)
 
     axis.imshow(img)
     plt.setp(axis.get_xticklabels(), visible=False)
@@ -135,51 +149,31 @@ def visualize_training_data(log_path):
     """
     log_list = read_driving_log(log_path)
 
-    steering_angle = np.array([float(log['steering']) for log in log_list])
+    idx_image = random.randint(0, len(log_list)-1)
 
-    speed = np.array([float(log['speed']) for log in log_list])
+    if 'center' in log_list[idx_image].keys():
+        image_path = get_absolute_imgpath(log_list[idx_image]['center'])
+        angle = float(log_list[idx_image]['steering'])
 
-    fig, axes = plt.subplots(3, 3, figsize=(16, 8))
+    elif 'left' in log_list[idx_image].keys():
+        image_path = get_absolute_imgpath(log_list[idx_image]['left'])
+        angle = float(log_list[idx_image]['steering']) + 0.1
 
-    image_path = get_absolute_imgpath(log_list[0]['left'])
-    angle = float(log_list[0]['steering']) + 0.25
+    elif 'right' in log_list[idx_image].keys():
+        image_path = get_absolute_imgpath(log_list[idx_image]['right'])
+        angle = float(log_list[idx_image]['steering']) - 0.1
+
+    fig, axes = plt.subplots(2, 2, figsize=(16, 8))
+
     plot_image_and_angle(axes[0,0], image_path, angle)
 
-    image_path = get_absolute_imgpath(log_list[0]['center'])
-    angle = float(log_list[0]['steering'])
-    plot_image_and_angle(axes[0,1], image_path, angle)
+    plot_image_and_angle(axes[0,1], image_path, angle, flip=True, change_bright=False, shear=False)
 
-    image_path = get_absolute_imgpath(log_list[0]['right'])
-    angle = float(log_list[0]['steering']) - 0.25
-    plot_image_and_angle(axes[0,2], image_path, angle)
+    plot_image_and_angle(axes[1,0], image_path, angle, flip=False, change_bright=True, shear=False)
+    
+    plot_image_and_angle(axes[1,1], image_path, angle, flip=False, change_bright=False, shear=True)
 
-
-    image_path = get_absolute_imgpath(log_list[0]['left'])
-    angle = float(log_list[0]['steering']) + 0.25
-    plot_image_and_angle(axes[1,0], image_path, angle, change_bright=True)
-
-    image_path = get_absolute_imgpath(log_list[0]['center'])
-    angle = float(log_list[0]['steering'])
-    plot_image_and_angle(axes[1,1], image_path, angle, change_bright=True)
-
-    image_path = get_absolute_imgpath(log_list[0]['right'])
-    angle = float(log_list[0]['steering']) - 0.25
-    plot_image_and_angle(axes[1,2], image_path, angle, change_bright=True)
-
-
-    image_path = get_absolute_imgpath(log_list[0]['left'])
-    angle = float(log_list[0]['steering']) + 0.25
-    plot_image_and_angle(axes[2,0], image_path, angle, flip=True)
-
-    image_path = get_absolute_imgpath(log_list[0]['center'])
-    angle = float(log_list[0]['steering'])
-    plot_image_and_angle(axes[2,1], image_path, angle, flip=True)
-
-    image_path = get_absolute_imgpath(log_list[0]['right'])
-    angle = float(log_list[0]['steering']) - 0.25
-    plot_image_and_angle(axes[2,2], image_path, angle, flip=True)
-
-    fig.tight_layout()
+    # fig.tight_layout()
     plt.show()
 
 
@@ -265,21 +259,66 @@ def get_absolute_imgpath(image_path):
 def flip_image_angle_pair(img_in, angle_in):
 
     image = cv2.flip(img_in, 1)
-    angle = - angle_in
+    angle = -angle_in
 
     return image, angle
 
-# def change_brightness(image):
-#     # Randomly select a percent change
-#     change_pct = random.uniform(0.4, 1.2)
-#
-#     # Change to HSV to change the brightness V
-#     hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-#     hsv[:,:,2] = hsv[:,:,2] * change_pct
-#
-#     #Convert back to RGB
-#     img_brightness = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
-#     return img_brightness
+def random_shear(image,steering,shear_range):
+    rows,cols,ch = image.shape
+    dx = np.random.randint(-shear_range,shear_range+1)
+    #    print('dx',dx)
+    random_point = [cols/2+dx,rows/2]
+    pts1 = np.float32([[0,rows],[cols,rows],[cols/2,rows/2]])
+    pts2 = np.float32([[0,rows],[cols,rows],random_point])
+    dsteering = dx/(rows/2) * 360/(2*np.pi*25.0) / 6.0    
+    M = cv2.getAffineTransform(pts1,pts2)
+    image = cv2.warpAffine(image,M,(cols,rows),borderMode=1)
+    steering +=dsteering
+    
+    return image,steering
+
+def change_brightness(image):
+    # Randomly select a percent change
+    change_pct = random.uniform(0.4, 1.2)
+
+    # Change to HSV to change the brightness V
+    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    hsv[:,:,2] = hsv[:,:,2] * change_pct
+
+    #Convert back to RGB
+    img_brightness = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+    return img_brightness
+
+#def change_brightness(image):
+#    image1 = cv2.cvtColor(image,cv2.COLOR_RGB2HSV)
+#    random_bright = 0.8 + 0.4*(2*np.random.uniform()-1.0)    
+#    image1[:,:,2] = image1[:,:,2]*random_bright
+#    image1 = cv2.cvtColor(image1,cv2.COLOR_HSV2RGB)
+#    return image1
+
+
+def gaussian_angle(ang):
+    new_ang = ang * (1.0 + np.random.uniform(-1, 1)/25)
+    return new_ang
+
+
+def augment_image_angle_pair(img_in, angle_in):
+
+    flip_mode = random.randint(1, 2)
+
+    if flip_mode == 1:
+        image_fl = img_in
+        angle_fl = angle_in
+    elif flip_mode == 2:
+        image_fl, angle_fl = flip_image_angle_pair(img_in, angle_in)
+
+#    image_st, angle_st = image_st, angle_st#random_shear(image_fl,angle_fl,shear_range=100)
+
+    img_out = change_brightness(image_fl)
+    angle_out = gaussian_angle(angle_fl)
+
+    return img_out, angle_out
+
 
 def my_generator(log_file_list, batch_size):
     """
@@ -297,84 +336,46 @@ def my_generator(log_file_list, batch_size):
 
         shuffled_list = shuffle(log_file_list)
 
-        for list_slice in generate_equal_slices(shuffled_list, batch_size):
+        for list_slice in generate_equal_slices(shuffled_list, int(batch_size)):
 
-            for mode in CAMERA_AND_AUGMENTATION_MODES:
+            img_list = []
+            steering_angle_list = []
 
-                img_list = []
-                steering_angle_list = []
-
-                for row in list_slice:
-                    if mode == 'CenterCam':
+            for row in list_slice:
+                    if 'center' in row.keys():
                         img_path = get_absolute_imgpath(row['center'])
-                        image = load_image(img_path, IMAGE_SIZE)
+                        image_c = load_image(img_path, IMAGE_SIZE)
 
-                        angle = float(row['steering'])
+                        angle_c = row['steering']
 
-                    elif mode == 'FlipCenter':
-                        img_path = get_absolute_imgpath(row['center'])
-                        image = load_image(img_path, IMAGE_SIZE)
+                        image, angle = augment_image_angle_pair(image_c, angle_c)
 
-                        angle = float(row['steering'])
-
-                        image, angle = flip_image_angle_pair(image, angle)
-
-                    elif mode == 'BrightnessCenter':
-                        img_path = get_absolute_imgpath(row['center'])
-                        image = load_image(img_path, IMAGE_SIZE)
-
-                        image = change_brightness(image)
-
-                        angle = float(row['steering'])
-
-                    elif mode == 'BrightnessFlipCenter':
-                        img_path = get_absolute_imgpath(row['center'])
-                        image = load_image(img_path, IMAGE_SIZE)
-
-                        image = change_brightness(image)
-
-                        angle = float(row['steering'])
-
-                        image, angle = flip_image_angle_pair(image, angle)
-
-                    elif mode == 'LeftCam':
+                    elif 'left' in row.keys():
                         img_path = get_absolute_imgpath(row['left'])
-                        image = load_image(img_path, IMAGE_SIZE)
+                        image_l = load_image(img_path, IMAGE_SIZE)
 
-                        angle = float(row['steering']) + 0.06
+                        angle_l = row['steering'] + 0.1
 
-                    elif mode == 'FlipLeft':
-                        img_path = get_absolute_imgpath(row['left'])
-                        image = load_image(img_path, IMAGE_SIZE)
+                        image, angle = augment_image_angle_pair(image_l, angle_l)
 
-                        angle = float(row['steering']) + 0.06
-
-                        image, angle = flip_image_angle_pair(image, angle)
-
-                    elif mode == 'RightCam':
+                    elif 'right' in row.keys():
                         img_path = get_absolute_imgpath(row['right'])
-                        image = load_image(img_path, IMAGE_SIZE)
+                        image_r = load_image(img_path, IMAGE_SIZE)
 
-                        angle = float(row['steering']) - 0.06
+                        angle_r = row['steering'] - 0.1
 
-                    elif mode == 'FlipRight':
-                        img_path = get_absolute_imgpath(row['right'])
-                        image = load_image(img_path, IMAGE_SIZE)
-
-                        angle = float(row['steering']) - 0.06
-
-                        image, angle = flip_image_angle_pair(image, angle)
+                        image, angle = augment_image_angle_pair(image_r, angle_r)
 
                     img_list.append(image)
                     steering_angle_list.append(angle)
 
-                features_slice = np.array(img_list).astype('float32')
+            features_slice = np.array(img_list)#.astype('float32')
 
-                labels_slice = np.array(steering_angle_list)
-                # print('labels, mean:', labels_slice.mean(), 'max:', labels_slice.max(), 'min:', labels_slice.min())
-                assert features_slice.shape[0] == labels_slice.shape[0]
+            labels_slice = np.array(steering_angle_list)
 
-                yield ({'lambda_input_1': features_slice}, {'output': labels_slice})
+            assert features_slice.shape[0] == labels_slice.shape[0]
+
+            yield ({'lambda_input_1': features_slice}, {'output': labels_slice})
 
 
 def build_model():
@@ -390,7 +391,7 @@ def build_model():
     mdl.add(Lambda(lambda x: x/128. - 1, input_shape=IMAGE_SHAPE, name="input"))
 
     # trim image
-    mdl.add(Lambda(lambda x: x[:, :-25, :, :]))
+    mdl.add(Lambda(lambda x: x[:, 10:-10, :, :]))
 
     # convolutions
     mdl.add(Convolution2D(24, 5, 5, subsample=(2, 2), border_mode='same',))
@@ -505,7 +506,7 @@ def train_model_generator(mdl, training_list, validation_list, epochs, batch_siz
 
     mdl.compile(
                 loss='mean_squared_error',
-                optimizer=Adam(lr=LEARNING_RATE),
+                optimizer=Adam(),#lr=LEARNING_RATE
                )
 
     history = mdl.fit_generator(my_generator(training_list, batch_size),
@@ -606,7 +607,7 @@ def test_model_and_training_without_generator():
 
 if __name__ == "__main__":
 
-    visualize_training_data(DRIVING_LOG_PATH)
+#    visualize_training_data(DRIVING_LOG_PATH)
     if TRAIN_FROM_SCRATCH:
         model = build_model()
 
@@ -631,8 +632,8 @@ if __name__ == "__main__":
     model, losses = train_model_generator(model,
                                        list_train,
                                        list_val,
-                                       epochs=5,
-                                       batch_size=100)
+                                       epochs=NUM_EPOCHS,
+                                       batch_size=BATCH_SIZE)
 
     model_json = model.to_json()
     with open("model.json", "w") as json_file:

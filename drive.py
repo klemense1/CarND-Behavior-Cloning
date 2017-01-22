@@ -21,6 +21,7 @@ import cv2
 import tensorflow as tf
 tf.python.control_flow_ops = tf
 
+import scipy
 
 sio = socketio.Server()
 app = Flask(__name__)
@@ -30,7 +31,7 @@ prev_image_array = None
 @sio.on('telemetry')
 def telemetry(sid, data):
     # The current steering angle of the car
-    steering_angle = data["steering_angle"]
+    #steering_angle = data["steering_angle"]
     # The current throttle of the car
     throttle = data["throttle"]
     # The current speed of the car
@@ -38,7 +39,6 @@ def telemetry(sid, data):
     # The current image from the center camera of the car
     imgString = data["image"]
     image = Image.open(BytesIO(base64.b64decode(imgString)))
-
     image_array = np.asarray(image)
     resize_shape = (160, 80)
     image_array = cv2.resize(image_array, resize_shape)
@@ -46,7 +46,7 @@ def telemetry(sid, data):
     # This model currently assumes that the features of the model are just the images. Feel free to change this.
     steering_angle = float(model.predict(transformed_image_array, batch_size=1))
     # The driving model currently just outputs a constant throttle. Feel free to edit this.
-    throttle = 0.2
+    throttle = 0.1#scipy.interp(abs(steering_angle), [0, 0.4], [0.15, 0.05,])
     print(steering_angle, throttle)
     send_control(steering_angle, throttle)
 
