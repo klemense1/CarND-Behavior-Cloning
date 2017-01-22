@@ -7,7 +7,7 @@ First, one has to collect it’s own data. So you have to think about what you r
 Second, the testing and adjusting loop is quite long. In previous projects with classification, one had a specific metric (accuracy) which had to be improved. Here, driving, seeing the car crash and step by step finding reasons for that takes quite some time.
 
 How did I approach the project?
-Udacity provided us with some advices. One was to use some students tips (find them under https://carnd-forums.udacity.com/questions/26214464/behavioral-cloning-cheatsheet)
+Udacity provided us with some advices. One was to use some students tips (see [1])
 
 Which ones did I rely on?
 
@@ -68,11 +68,11 @@ Also, I had to change the cost function using categorical_crossentropy to mean_s
 
 After changing the cost function, I started training the model again and wondered why the accuracy didn’t really improve or at least change. I thought that the generator pipleline might be wrong, but eventually  realized that accuracy is not the right metric with regression any more and that I could only rely on the costs being computed.
 
-Now I could see some steering but always the same output (it slightly varied but only after the 5 decimal or so). Why so? I guess I wasn’t using enough input data at that point to cover. Also, I had forgot to implement the pooling. Although Kaspar Sakman (another Udacity student fellow explaining his approach, see [1]) writes that he does not use pooling for regression, I didn’t experience the same. I implemented the pooling and finally got some steering.
+Now I could see some steering but always the same output (it slightly varied but only after the 5 decimal or so). Why so? I guess I wasn’t using enough input data at that point to cover. Also, I had forgot to implement the pooling. Although Kaspar Sakman (another Udacity student fellow explaining his approach, see [2]) writes that he does not use pooling for regression, I didn’t experience the same. I implemented the pooling and finally got some steering.
 
 Still, my model did not past the first corner. It had a drift to the left and did not steer enough. The reason is obvious when investigating the input data. I had a lot of slightly left steering but firstly the steering angles were not distributed equally and secondly the high angles were underrepresented.
 
-I came to the conclusion that my input data was not enough. I needed more data. As described by Vivek Yadav in [2], augmentation was the easiest way to get to more data.
+I came to the conclusion that my input data was not enough. I needed more data. As described by Vivek Yadav in [3], augmentation was the easiest way to get to more data.
 
 I focused on:
 
@@ -97,6 +97,8 @@ I want to improve the longitudinal driver. I started out with a constant throttl
 
 Record my own sufficient training data.
 
-[1] https://medium.com/@ksakmann/behavioral-cloning-make-a-car-drive-like-yourself-dc6021152713#.xqcvfgxxg
+[1] https://carnd-forums.udacity.com/questions/26214464/behavioral-cloning-cheatsheet
 
-[2] https://chatbotslife.com/using-augmentation-to-mimic-human-driving-496b569760a9#.2kz9bqk51
+[2] https://medium.com/@ksakmann/behavioral-cloning-make-a-car-drive-like-yourself-dc6021152713#.xqcvfgxxg
+
+[3] https://chatbotslife.com/using-augmentation-to-mimic-human-driving-496b569760a9#.2kz9bqk51
