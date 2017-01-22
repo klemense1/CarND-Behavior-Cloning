@@ -40,7 +40,7 @@ I then continued implementing the generator. How so? For that, I had to write a 
 
 What’s the advantage of preprocessing the list before my_generator and not passing the whole csv? I realized that with using three camera views, it is easier to post process the  list. That said, I am reading the paths of all three lists, adjusting the angle for left and right camera and then storing them in the dictionary as {image, angle}, as the model only uses one image.
 
-3) Use an analog joystick.
+- Use an analog joystick.
 
 When I first run the training mode, I used my keyboard. But I quickly realized that I could not manage to steer as smoothly as I wanted and thus would not get to a dataset good enough to train my model. I quickly thought about post-processing the steering angle with some running mean or something, but I chose the other way and borrowed a driving wheel for car games from a friend of mine. I recorded three laps and also recorded going back from the border to the inner lane.
 
@@ -83,7 +83,7 @@ I focused on:
 
 Still, the model could not get through the whole lap. Did I miss something? I recorded the training data again but did not improve my model much. Finally, I changed to the Udacity training data and … it worked!
 
-What did I learn?
+## What did I learn?
 
 Data: Shit in, shit out. Although I knew that already, I wasn’t aware of the amount of data necessary to train such a conv neural network. I was even more surprised how accurate one has to be to record the data. Even now, my own recorded training data was not good enough.
 
