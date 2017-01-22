@@ -10,6 +10,7 @@ How did I approach the project?
 Udacity provided us with some advices. One was to use some students tips (find them under https://carnd-forums.udacity.com/questions/26214464/behavioral-cloning-cheatsheet)
 
 Which ones did I rely on?
+
 7) Copy the Nividia Pipeline
 1) Use generators 
 11) Use 3 images to overfit and thus quickly test your model architecture
