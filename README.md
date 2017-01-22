@@ -16,15 +16,18 @@ Which ones did I rely on?
 
 I started right from the beginning implementing Nvidia’s model architecture from the paper „End to End Learning for Self-Driving Cars“. 
 The model is first normalized in the graph to make life  easier for the optimizer.
+
     mdl.add(Lambda(lambda x: x/128. - 1, input_shape=IMAGE_SHAPE, name="input"))
 
 The model then consists of 5 convolutional layers with Max-Pooling, Dropout and a rectified linear unit. The dropout prevents the model from overfitting the data, as it drops half of the weights randomly and thus makes the model develop duplicating patterns to be robust against those fallouts.
+
     mdl.add(Convolution2D(24, 5, 5, subsample=(2, 2), border_mode='same',))
     mdl.add(MaxPooling2D(pool_size=(2, 2)))
     mdl.add((Dropout(0.5)))
     mdl.add(Activation('relu'))
 
 Finally I flatten the graph and use 3 dense layers to get to my regression output.
+
     mdl.add(Flatten())
 
     mdl.add(Dense(128, activation='relu'))
@@ -47,6 +50,7 @@ Well, when I finally trained my model and wanted to see how it behaves in the si
 I first created a model performing classification. With the angles having all sorts of values (but realistically also still having a limited set of possible angles), I decided to convert those angles to N classes and do classification. That said, I passed 30 different angle classes to my model during training. I still think this approach would work, but during finding out why my model was not moving, I changed my model towards regression. This way, the car is able to steer way more smoothly. That means, instead of having probabilities for N classes, I only had one class but used the probability as the angle itself.
 
 What architectural changes did I have to do from classification to regression?
+
 Regression:
 
     mdl.add(Dense(128, activation='relu'))
