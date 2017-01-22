@@ -1,6 +1,6 @@
 # CarND-Behavior-Cloning
 
-Wow. That was the toughest project so far.
+Wow. That was the most interesting project so far with a couple of challenges.
 
 Why so? Two things come to my mind. 
 First, one has to collect it’s own data. So you have to think about what you record and which equipment to use. The data plays a huge role in this project’s success, but I will come to that.
