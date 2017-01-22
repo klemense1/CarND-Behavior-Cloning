@@ -23,7 +23,7 @@ NUM_CHANNELS = 3
 TRAIN_FROM_SCRATCH = True
 
 RESIZE = True
-NUM_IMAGE_MODES = 2 # for flipping
+NUM_IMAGE_MODES = 3 # for flipping
 
 BATCH_SIZE = 90
 NUM_EPOCHS = 5
@@ -211,6 +211,7 @@ def augment_image_angle_pair(img_in, angle_in):
     angle_out ... augmentated angle
     """
     flip_mode = random.randint(1, 2)
+    shade_mode = random.randint(1,3)
 
     if flip_mode == 1:
         image_fl = img_in
@@ -218,7 +219,12 @@ def augment_image_angle_pair(img_in, angle_in):
     elif flip_mode == 2:
         image_fl, angle_fl = augm.flip_image_angle_pair(img_in, angle_in)
 
-    img_out = augm.change_brightness(image_fl)
+    if shade_mode == 1:
+       img_out = image_fl
+    elif shade_mode == 2:
+       img_out = augm.change_brightness(image_fl)
+    elif shade_mode == 3:
+       img_out = augm.add_random_shadow(image_fl)
 
     angle_out = augm.gaussian_angle(angle_fl)
 
