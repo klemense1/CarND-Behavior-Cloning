@@ -87,9 +87,9 @@ What did I learn?
 
 Data: Shit in, shit out. Although I knew that already, I wasn’t aware of the amount of data necessary to train such a conv neural network. I was even more surprised how accurate one has to be to record the data. Even now, my own recorded training data was not good enough.
 
-Next steps?
+## Next steps?
 
-    The model does not get through the second route in the simulator. I assume that brightness, shadows and others light effects are challenging my model. The next step is to incorporate that into my augmentation and thus generate more training data.
+The model does not get through the second route in the simulator. I assume that brightness, shadows and others light effects are challenging my model. The next step is to incorporate that into my augmentation and thus generate more training data.
 
 I still want to test whether classification works as well, although the steering will be less smoothly.
 
