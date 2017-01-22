@@ -48,11 +48,13 @@ I first created a model performing classification. With the angles having all so
 
 What architectural changes did I have to do from classification to regression?
 Regression:
+
     mdl.add(Dense(128, activation='relu'))
     mdl.add(Dense(64, activation='relu'))
     mdl.add(Dense(1))
 
 Classification:
+
     mdl.add(Dense(128, activation='relu'))
     mdl.add(Dense(64, activation='relu'))
     mdl.add(Dense(NUM_CLASSES), activation=‚softmax‘)
