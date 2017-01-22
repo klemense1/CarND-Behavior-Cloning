@@ -35,7 +35,7 @@ def read_driving_log(log_path):
     return driving_log
 
 if __name__ == "__main__":
-    DRIVING_LOG_PATH = '/Users/Klemens/Udacity_Nano_Car/P3_BehaviorCloning/driving_log.csv'
+    DRIVING_LOG_PATH = '/Users/Klemens/Udacity_Nano_Car/P3_BehaviorCloning/170121_data/driving_log.csv'
     IMG_DIR_PATH = '/Users/Klemens/Udacity_Nano_Car/P3_BehaviorCloning/IMG/'
 
     list_dir = os.listdir(IMG_DIR_PATH)
@@ -54,8 +54,17 @@ if __name__ == "__main__":
 
     steering_angle = np.array([float(log['angle']) for log in driving_log])
 
-    plt.hist(steering_angle, bins=20)
-    plt.title('Histogram showing distribution of active steering in dataset')
-    plt.xlabel('steering angle [deg]')
-    plt.ylabel('number of frames')
+    fig, [ax1, ax2] = plt.subplots(nrows=2, ncols=1, figsize=(10, 8))
+
+    ax1.hist(steering_angle, bins=20)
+    ax1.set_title('Histogram showing distribution of active steering in dataset')
+    ax1.set_xlabel('steering angle [deg]')
+    ax1.set_ylabel('number of frames')
+
+    ax2.plot(steering_angle)
+    ax2.set_title('Steering over time')
+    ax2.set_xlabel('frames')
+    ax2.set_ylabel('steering angle [deg]')
+
+    fig.tight_layout()
     plt.show()
