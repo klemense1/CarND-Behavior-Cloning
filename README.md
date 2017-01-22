@@ -11,9 +11,9 @@ Udacity provided us with some advices. One was to use some students tips (find t
 
 Which ones did I rely on?
 
-7) Copy the Nividia Pipeline
-1) Use generators 
-11) Use 3 images to overfit and thus quickly test your model architecture
+- Copy the Nividia Pipeline
+- Use generators 
+- Use 3 images to overfit and thus quickly test your model architecture
 
 I started right from the beginning implementing Nvidia’s model architecture from the paper „End to End Learning for Self-Driving Cars“. 
 The model is first normalized in the graph to make life  easier for the optimizer.
