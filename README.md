@@ -75,17 +75,20 @@ Still, my model did not past the first corner. It had a drift to the left and di
 I came to the conclusion that my input data was not enough. I needed more data. As described by Vivek Yadav in [2], augmentation was the easiest way to get to more data.
 
 I focused on:
-1) Flipping the data. Thus way, I would get to as much left steering data as right steering data.
-2) Adjusting the brightness. The first track does not have brightness changes, but the second has.
-3) Duplicating the data with steering angles larger that 0.2. This way, I would get to more steering data with angles necessary to react in situations when you are close to the side line.
-4) Slightly changing the steering angle. Modifying, Shearing or rotating the picture would be quite some effort, but why not change the angle and thus generate a different image-angle pair this way?
+
+- Flipping the data. Thus way, I would get to as much left steering data as right steering data.
+- Adjusting the brightness. The first track does not have brightness changes, but the second has.
+- Duplicating the data with steering angles larger that 0.2. This way, I would get to more steering data with angles necessary to react in situations when you are close to the side line.
+- Slightly changing the steering angle. Modifying, Shearing or rotating the picture would be quite some effort, but why not change the angle and thus generate a different image-angle pair this way?
 
 Still, the model could not get through the whole lap. Did I miss something? I recorded the training data again but did not improve my model much. Finally, I changed to the Udacity training data and … it worked!
 
 What did I learn?
+
 Data: Shit in, shit out. Although I knew that already, I wasn’t aware of the amount of data necessary to train such a conv neural network. I was even more surprised how accurate one has to be to record the data. Even now, my own recorded training data was not good enough.
 
 Next steps?
+
 The model does not get through the second route in the simulator. I assume that brightness, shadows and others light effects are challenging my model. The next step is to incorporate that into my augmentation and thus generate more training data.
 
 I still want to test whether classification works as well, although the steering will be less smoothly.
